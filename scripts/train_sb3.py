@@ -33,6 +33,9 @@ ap.add_argument("--outage_prob", type=float, default=0.0, help="share of trainin
 ap.add_argument("--capacity_bound", action="store_true", help="switch the capacity bound on (training and evaluation)")
 ap.add_argument("--eval_every", type=int, default=25_000)
 ap.add_argument("--train_load_scale", type=float, default=1.0, help="demand multiplier during TRAINING (use e.g. 1.6 so constraints are actually tested)")
+ap.add_argument("--reward_weights", type=float, nargs=4, default=[1.0, 0.5, 2.0, 0.3], metavar=("W_THR", "W_LAT", "W_LOSS", "W_FAIR"),
+                help="reward weights used in TRAINING (evaluation tables do not depend on them)")
+ap.add_argument("--suffix", default="", help="extra text added to output file names, e.g. _tight, so runs do not overwrite each other")
 ap.add_argument("--lagrangian", action="store_true", help="constrained RL: Lagrangian penalty on URLLC latency/loss (novelty A)")
 ap.add_argument("--budget_lat", type=float, default=0.005, help="allowed mean URLLC latency-violation cost per step")
 ap.add_argument("--budget_loss", type=float, default=0.005, help="allowed mean URLLC drop cost per step")
@@ -50,7 +53,7 @@ cfg = Config()
 DISCRETE = args.algo == "dqn"
 EVAL_SEEDS = list(range(10))
 CURVE_SEEDS = list(range(100, 105))        # fixed validation episodes used for the training curve
-tag = args.algo + ("_lag" if args.lagrangian else "") + (f"_s{args.train_load_scale:g}" if args.train_load_scale != 1.0 else "") + ("_cb" if args.capacity_bound else "") + ("_out" if args.outage_prob > 0 else "")
+tag = args.algo + ("_lag" if args.lagrangian else "") + (f"_s{args.train_load_scale:g}" if args.train_load_scale != 1.0 else "") + ("_cb" if args.capacity_bound else "") + ("_out" if args.outage_prob > 0 else "") + args.suffix
 
 
 class SB3Policy:
@@ -94,7 +97,8 @@ models, curves = [], []
 EnvCls = DiscreteSlicingEnv if DISCRETE else SlicingEnv
 for sd in range(args.seeds):
     print(f"Training {args.algo.upper()} agent seed {sd} ({args.timesteps} steps) ...", flush=True)
-    env = EnvCls(cfg=replace(cfg, load_scale=args.train_load_scale), split="train", outage_prob=args.outage_prob, capacity_bound=args.capacity_bound)
+    env = EnvCls(cfg=replace(cfg, load_scale=args.train_load_scale), split="train", outage_prob=args.outage_prob, capacity_bound=args.capacity_bound,
+                  reward_weights=tuple(args.reward_weights))
     if args.lagrangian:
         env = LagrangianWrapper(env, budgets=(args.budget_lat, args.budget_loss), lr=args.lag_lr)
     model = make_model(env, sd)

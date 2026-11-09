@@ -66,7 +66,7 @@ class LagrangianWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, r, term, trunc, info = self.env.step(action)
-        c = np.array([info["cost_latency"], info["cost_loss"]], dtype=float)
+        c = np.array([info["cost_latency"], info["cost_loss"]], dtype=float) * info["link_up"]   # no cost while the link is down (uncontrollable)
         self._cost += c
         self._n += 1
         r_pen = float(r - self.lam @ c)

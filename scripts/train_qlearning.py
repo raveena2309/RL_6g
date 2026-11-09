@@ -64,7 +64,8 @@ for sd in range(args.seeds):
     agents.append(ag); curves.append(cv)
 
 Path("results/models").mkdir(parents=True, exist_ok=True)
-np.save("results/models/qlearning_Q_seed0.npy", agents[0].Q)
+for i, ag in enumerate(agents):
+    np.save(f"results/models/qlearning_Q_seed{i}.npy", ag.Q)
 curves = np.array(curves)
 pd.DataFrame(curves.T, columns=[f"seed{i}" for i in range(args.seeds)]).to_csv("results/tables/qlearning_training.csv", index_label="episode")
 
